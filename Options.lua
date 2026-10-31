@@ -175,6 +175,8 @@ function A.RefreshOptions()
  if A.db.enabled then A.preview:Show();p.nativeCursor:Hide() else A.preview:Hide();p.nativeCursor:Show() end
 end
 
+local classFiles = { WARRIOR="war", PALADIN="pal", HUNTER="hunt", ROGUE="rogue", PRIEST="priest", SHAMAN="sham", MAGE="mage", WARLOCK="lock", DRUID="druid" }
+
 local function ClassButton(p, x, y, w, h, class)
  local b=CreateFrame("Button",nil,p);b:SetPoint("TOPLEFT",p,"TOPLEFT",x,y);b:SetWidth(w);b:SetHeight(h)
  local c=RAID_CLASS_COLORS[class] or {r=1,g=1,b=1}
@@ -182,7 +184,20 @@ local function ClassButton(p, x, y, w, h, class)
  b:SetHighlightTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight")
  b.text=Text(b,0,-(h/2-5.5),w,h,11);b.text:SetJustifyH("CENTER")
  b.text:SetText(A.L(class));b.text:SetTextColor(c.r,c.g,c.b)
- b:SetScript("OnClick",function() A.db.rgb={c.r,c.g,c.b};A.db.enabled=true;A.Apply();A.RefreshOptions() end)
+ 
+ b:SetScript("OnClick",function()
+  local file = classFiles[class]
+  -- Toggle logic: If they click the already active class, turn the icon off (keep the color)
+  if A.db.classIcon == file and A.db.enabled then
+   A.db.classIcon = false
+  else
+   A.db.rgb={c.r,c.g,c.b}
+   A.db.classIcon = file
+   A.db.enabled=true
+  end
+  A.Apply();A.RefreshOptions()
+ end)
+ 
  return b
 end
 
