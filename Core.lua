@@ -6,15 +6,17 @@ A.colors = {
  {"Red", 1, .08, .08}, {"Blue", .25, .5, 1}
 }
 A.defaults = { enabled=false, size=64, thickness=2, opacity=100, halo=45,
- crosshair=24, dot=5, pulse=false, color=1, language="fr" }
+ crosshair=24, dot=5, pulse=false, color=1, language="fr", classIcon=false }
 local limits = {size={24,160}, thickness={1,3}, opacity={20,100}, halo={0,100},
  crosshair={0,100}, dot={0,24}, color={1,8}}
+
 function A.Number(v, fallback)
  if type(v)~="number" and type(v)~="string" then return fallback end
  local n=tonumber(v)
  if not n or n~=n or n>1e100 or n< -1e100 then return fallback end
  return n
 end
+
 function A.InitDB()
  local old=type(AzerothCursorDB)=="table" and AzerothCursorDB or {}
  local db={}
@@ -23,6 +25,9 @@ function A.InitDB()
   if limits[k] then
    local range=limits[k]
    db[k]=math.floor(math.max(range[1],math.min(range[2],A.Number(n,v)))+.5)
+  elseif k=="classIcon" then
+   -- Prevents the saved string from being overwritten by the boolean check
+   if type(n)=="string" or type(n)=="boolean" then db[k]=n else db[k]=false end
   elseif type(v)=="boolean" then
    if type(n)=="boolean" then db[k]=n else db[k]=v end
   elseif k=="language" then db[k]=n=="en" and "en" or "fr" end
@@ -54,6 +59,7 @@ function A.CreateVisual(name,parent)
  f.halo=Texture(f,"Halo","BACKGROUND")
  f.outline=Texture(f,"Outline2","BORDER")
  f.ring=Texture(f,"Ring2","ARTWORK")
+ f.classIcon=Texture(f,"Ring1","ARTWORK");f.classIcon:Hide()
  f.crossOutline=Texture(f,"CrossOutline","ARTWORK")
  f.cross=Texture(f,"Cross","OVERLAY")
  f.dotOutline=Texture(f,"DotOutline","OVERLAY")
@@ -65,15 +71,31 @@ local function Size(t,n) t:SetWidth(n);t:SetHeight(n) end
 function A.Style(f)
  local db=A.db;local r,g,b=A.Color()
  Size(f.ring,db.size);Size(f.outline,db.size);Size(f.halo,db.size*1.8)
- f.ring:SetTexture("Interface\\AddOns\\AzerothCursor\\Media\\Ring"..db.thickness..".tga")
- f.outline:SetTexture("Interface\\AddOns\\AzerothCursor\\Media\\Outline"..db.thickness..".tga")
- f.ring:SetVertexColor(r,g,b,db.opacity/100)
- f.outline:SetVertexColor(0,0,0,db.opacity/100)
  f.halo:SetVertexColor(r,g,b,db.halo/100)
- -- A transparent central gap keeps the exact click point and native pointer readable.
- Size(f.cross,db.crosshair*2+16);Size(f.crossOutline,db.crosshair*2+16)
- f.cross:SetVertexColor(r,g,b,db.opacity/100);f.crossOutline:SetVertexColor(0,0,0,db.opacity/100)
- if db.crosshair>0 then f.cross:Show();f.crossOutline:Show() else f.cross:Hide();f.crossOutline:Hide() end
+
+ -- If a class icon is selected, show it and hide the stock ring/crosshair
+ if db.classIcon then
+  f.classIcon:SetTexture("Interface\\AddOns\\AzerothCursor\\Media\\"..db.classIcon..".tga")
+  f.classIcon:SetVertexColor(r,g,b,db.opacity/100)
+  Size(f.classIcon, db.size)
+  f.classIcon:Show()
+  
+  f.ring:Hide(); f.outline:Hide()
+  f.cross:Hide(); f.crossOutline:Hide()
+ else
+  f.classIcon:Hide()
+  
+  f.ring:SetTexture("Interface\\AddOns\\AzerothCursor\\Media\\Ring"..db.thickness..".tga")
+  f.outline:SetTexture("Interface\\AddOns\\AzerothCursor\\Media\\Outline"..db.thickness..".tga")
+  f.ring:SetVertexColor(r,g,b,db.opacity/100)
+  f.outline:SetVertexColor(0,0,0,db.opacity/100)
+  f.ring:Show(); f.outline:Show()
+  
+  Size(f.cross,db.crosshair*2+16);Size(f.crossOutline,db.crosshair*2+16)
+  f.cross:SetVertexColor(r,g,b,db.opacity/100);f.crossOutline:SetVertexColor(0,0,0,db.opacity/100)
+  if db.crosshair>0 then f.cross:Show();f.crossOutline:Show() else f.cross:Hide();f.crossOutline:Hide() end
+ end
+
  Size(f.dot,math.max(1,db.dot*2));Size(f.dotOutline,math.max(1,db.dot*2))
  f.dot:SetVertexColor(r,g,b,db.opacity/100);f.dotOutline:SetVertexColor(0,0,0,db.opacity/100)
  if db.dot>0 then f.dot:Show();f.dotOutline:Show() else f.dot:Hide();f.dotOutline:Hide() end
@@ -95,7 +117,7 @@ function A.Preset(name)
  local p=presets[name];if not p then return end
  local keys={"size","thickness","opacity","halo","crosshair","dot","pulse","color"}
  for i=1,table.getn(keys) do A.db[keys[i]]=p[i] end
- A.db.rgb=nil;A.db.enabled=true;A.Apply()
+ A.db.rgb=nil; A.db.classIcon=false; A.db.enabled=true;A.Apply()
 end
 function A.Find()
  A.db.enabled=true;A.findRemaining=1.2;A.Apply()
